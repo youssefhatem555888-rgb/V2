@@ -1,0 +1,826 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Youssef — Creative Developer & Technologist</title>
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        darkBg: '#05070A',
+                        secondaryBg: '#0B0F14',
+                        surface: '#11161D',
+                        textMain: '#F5F7FA',
+                        textMuted: '#8A939F',
+                        accent: '#6366F1',
+                        accentSecondary: '#22D3EE',
+                        highlight: '#EC4899',
+                    },
+                    fontFamily: {
+                        sans: ['Outfit', 'sans-serif'],
+                        mono: ['Space Grotesk', 'monospace'],
+                    },
+                }
+            }
+        }
+    </script>
+    <!-- Three.js CDN -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <style>
+        /* Custom Styles & Noise Overlay */
+        *, *::before, *::after {
+            box-sizing: border-box;
+        }
+        body {
+            background-color: #05070A;
+            color: #F5F7FA;
+            font-family: 'Outfit', sans-serif;
+            overflow-x: hidden;
+            cursor: default;
+        }
+        @media (min-width: 1024px) {
+            body { cursor: none; }
+        }
+        .noise-bg {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            content: "";
+            opacity: 0.035;
+            pointer-events: none;
+            z-index: 9999;
+            background: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E");
+        }
+        /* Custom Cursor */
+        #custom-cursor {
+            pointer-events: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            z-index: 10000;
+            transition: transform 0.15s ease-out, width 0.2s ease, height 0.2s ease, background-color 0.2s ease;
+            transform: translate(-50%, -50%);
+        }
+        .cursor-dot {
+            width: 8px;
+            height: 8px;
+            background-color: #22D3EE;
+            border-radius: 50%;
+            position: fixed;
+            top: 0;
+            left: 0;
+            pointer-events: none;
+            z-index: 10001;
+            transform: translate(-50%, -50%);
+            transition: opacity 0.2s ease;
+        }
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar {
+            width: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #05070A;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #11161D;
+            border-radius: 3px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #6366F1;
+        }
+        /* Smooth reveal utilities */
+        .reveal-up {
+            opacity: 0;
+            transform: translateY(30px);
+            transition: opacity 0.8s cubic-bezier(0.16, 1, 0.3, 1), transform 0.8s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+        .reveal-up.active {
+            opacity: 1;
+            transform: translateY(0);
+        }
+        /* Glassmorphism subtle */
+        .glass-panel {
+            background: rgba(17, 22, 29, 0.65);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid rgba(245, 247, 250, 0.06);
+        }
+        .glass-nav {
+            background: rgba(11, 15, 20, 0.75);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border: 1px solid rgba(245, 247, 250, 0.08);
+        }
+        /* Typography spacing */
+        .tracking-widest-custom {
+            letter-spacing: 0.25em;
+        }
+    </style>
+</head>
+<body class="bg-darkBg text-textMain selection:bg-accent selection:text-white">
+
+    <!-- Noise Texture Overlay -->
+    <div class="noise-bg"></div>
+
+    <!-- Custom Cursor -->
+    <div id="custom-cursor" class="hidden lg:block w-8 h-8 rounded-full border border-cyan-400/40 bg-cyan-400/10"></div>
+    <div id="cursor-dot" class="hidden lg:block"></div>
+
+    <!-- Cinematographic Loader -->
+    <div id="loader" class="fixed inset-0 z-50 bg-darkBg flex items-center justify-center transition-opacity duration-700">
+        <div class="text-center">
+            <div id="loader-letter" class="font-mono text-6xl md:text-8xl font-bold tracking-tighter text-textMain mb-4">Y</div>
+            <div class="w-32 h-[2px] bg-surface mx-auto overflow-hidden relative">
+                <div id="loader-bar" class="absolute inset-0 bg-gradient-to-r from-accent to-accentSecondary -translate-x-full transition-transform duration-1000"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Floating Navigation -->
+    <header class="fixed top-6 left-0 right-0 z-40 flex justify-center px-4 transition-all duration-300">
+        <nav class="glass-nav rounded-full px-6 py-3 flex items-center justify-between gap-8 md:gap-16 shadow-2xl">
+            <!-- Brand -->
+            <a href="#home" class="font-mono text-sm font-bold tracking-wider hover:text-accentSecondary transition-colors flex items-center gap-2">
+                <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+                YOUSSEF
+            </a>
+
+            <!-- Desktop Links -->
+            <div class="hidden md:flex items-center gap-8 font-mono text-xs tracking-widest text-textMuted">
+                <a href="#about" class="hover:text-textMain transition-colors">ABOUT</a>
+                <a href="#skills" class="hover:text-textMain transition-colors">SKILLS</a>
+                <a href="#projects" class="hover:text-textMain transition-colors">PROJECTS</a>
+                <a href="#contact" class="hover:text-textMain transition-colors">CONTACT</a>
+            </div>
+
+            <!-- Status Indicator / Action -->
+            <div class="flex items-center gap-3">
+                <span class="hidden lg:inline-block text-[10px] font-mono uppercase tracking-widest text-emerald-400/90 bg-emerald-950/40 border border-emerald-500/20 px-2.5 py-1 rounded-full">
+                    Available For Hire
+                </span>
+                <!-- Mobile Menu Trigger -->
+                <button id="menu-btn" class="md:hidden text-textMain focus:outline-none p-1">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4 8h16M4 16h16"></path>
+                    </svg>
+                </button>
+            </div>
+        </nav>
+    </header>
+
+    <!-- Mobile Menu Overlay -->
+    <div id="mobile-menu" class="fixed inset-0 z-30 bg-darkBg/95 backdrop-blur-2xl flex flex-col items-center justify-center gap-8 opacity-0 pointer-events-none transition-opacity duration-300 md:hidden">
+        <a href="#home" class="mobile-link font-mono text-2xl tracking-widest text-textMuted hover:text-textMain">HOME</a>
+        <a href="#about" class="mobile-link font-mono text-2xl tracking-widest text-textMuted hover:text-textMain">ABOUT</a>
+        <a href="#skills" class="mobile-link font-mono text-2xl tracking-widest text-textMuted hover:text-textMain">SKILLS</a>
+        <a href="#projects" class="mobile-link font-mono text-2xl tracking-widest text-textMuted hover:text-textMain">PROJECTS</a>
+        <a href="#contact" class="mobile-link font-mono text-2xl tracking-widest text-textMuted hover:text-textMain">CONTACT</a>
+        <button id="close-menu" class="absolute top-8 right-8 text-textMuted hover:text-textMain">
+            <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M6 18L18 6M6 6l12 12"></path>
+            </svg>
+        </button>
+    </div>
+
+    <!-- Hero Section -->
+    <section id="home" class="relative min-h-screen flex items-center justify-center pt-24 pb-12 overflow-hidden">
+        <!-- Three.js Background Canvas Container -->
+        <div id="webgl-container" class="absolute inset-0 pointer-events-none opacity-40"></div>
+
+        <div class="max-w-7xl mx-auto px-6 w-full relative z-10 grid grid-cols-1 lg:grid-cols-12 gap-12 items-center">
+            <!-- Left Column: Identity & Metadata -->
+            <div class="lg:col-span-8 flex flex-col items-start text-left">
+                <div class="inline-flex items-center gap-3 px-3.5 py-1.5 rounded-full glass-panel mb-6 reveal-up">
+                    <span class="w-1.5 h-1.5 rounded-full bg-accentSecondary"></span>
+                    <span class="font-mono text-xs tracking-widest text-textMuted">EGYPT — DAMANHOUR // 2026</span>
+                </div>
+
+                <h1 class="font-sans text-6xl sm:text-7xl md:text-8xl lg:text-9xl font-bold tracking-tight leading-none mb-6 reveal-up" style="transition-delay: 0.1s;">
+                    YOUSSEF<span class="text-accent">.</span>
+                </h1>
+
+                <p class="font-mono text-sm md:text-base text-textMuted max-w-xl mb-10 leading-relaxed reveal-up" style="transition-delay: 0.2s;">
+                    Creative Developer, UI/UX Designer & Technologist crafting immersive digital architectures and high-performance interactive experiences at the intersection of design and engineering.
+                </p>
+
+                <div class="flex flex-wrap items-center gap-4 reveal-up" style="transition-delay: 0.3s;">
+                    <a href="#projects" class="group relative inline-flex items-center gap-3 px-8 py-4 rounded-full bg-textMain text-darkBg font-mono text-xs font-semibold tracking-wider hover:bg-accentSecondary transition-all duration-300 shadow-xl">
+                        <span>EXPLORE MY WORK</span>
+                        <svg class="w-4 h-4 transform group-hover:translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 8l4 4m0 0l-4 4m4-4H3"></path>
+                        </svg>
+                    </a>
+                    <a href="#contact" class="inline-flex items-center gap-3 px-8 py-4 rounded-full glass-panel text-textMain font-mono text-xs font-semibold tracking-wider hover:border-accent transition-all duration-300">
+                        <span>LET'S TALK</span>
+                    </a>
+                </div>
+            </div>
+
+            <!-- Right Column: Technical Spec Badges -->
+            <div class="lg:col-span-4 flex flex-col gap-4 reveal-up" style="transition-delay: 0.4s;">
+                <div class="glass-panel p-6 rounded-2xl relative overflow-hidden group">
+                    <div class="absolute -right-10 -bottom-10 w-32 h-32 bg-accent/10 rounded-full blur-2xl group-hover:bg-accent/20 transition-all"></div>
+                    <span class="font-mono text-[10px] tracking-widest text-textMuted block mb-2">PRIMARY FOCUS</span>
+                    <h3 class="font-sans text-lg font-semibold text-textMain mb-1">Creative Web Engineering</h3>
+                    <p class="text-xs text-textMuted leading-relaxed">Building fluid interfaces, high-end interactive animations, and robust backend systems.</p>
+                </div>
+
+                <div class="glass-panel p-6 rounded-2xl relative overflow-hidden group">
+                    <div class="absolute -right-10 -bottom-10 w-32 h-32 bg-cyan-500/10 rounded-full blur-2xl group-hover:bg-cyan-500/20 transition-all"></div>
+                    <span class="font-mono text-[10px] tracking-widest text-textMuted block mb-2">DESIGN PHILOSOPHY</span>
+                    <h3 class="font-sans text-lg font-semibold text-textMain mb-1">Futuristic Minimalism</h3>
+                    <p class="text-xs text-textMuted leading-relaxed">Sophisticated dark aesthetics, deep contrast, meticulous typography, and zero clutter.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Intro / Personal Statement Section -->
+    <section class="py-28 relative border-t border-surface">
+        <div class="max-w-5xl mx-auto px-6">
+            <span class="font-mono text-xs text-accent tracking-widest uppercase block mb-6 reveal-up">01 // INTRODUCTION</span>
+            <h2 class="font-sans text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-medium tracking-tight leading-tight reveal-up">
+                "I build digital experiences where code meets design, turning complex ideas into intentional, high-performance web applications."
+            </h2>
+            <p class="font-mono text-sm md:text-base text-textMuted mt-8 max-w-2xl leading-relaxed reveal-up">
+                Based in Damanhour, Egypt. At 16, I combine deep technical curiosity with refined visual taste, specializing in full-stack web development, Discord bot automation, and immersive UI/UX experiences.
+            </p>
+        </div>
+    </section>
+
+    <!-- About Section -->
+    <section id="about" class="py-28 relative border-t border-surface bg-secondaryBg/30">
+        <div class="max-w-7xl mx-auto px-6">
+            <div class="flex flex-col md:flex-row md:items-end justify-between mb-16 gap-4">
+                <div>
+                    <span class="font-mono text-xs text-accent tracking-widest uppercase block mb-3">02 // BACKGROUND</span>
+                    <h2 class="font-sans text-4xl md:text-5xl font-bold tracking-tight">Personal Profile</h2>
+                </div>
+                <p class="font-mono text-xs text-textMuted max-w-xs">Structured precision meets creative freedom in every line of code.</p>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <!-- Profile Spec 1 -->
+                <div class="glass-panel p-8 rounded-3xl flex flex-col justify-between h-80 reveal-up">
+                    <div>
+                        <span class="font-mono text-xs text-accent tracking-widest block mb-4">IDENTITY</span>
+                        <h3 class="font-sans text-2xl font-bold mb-2">Youssef</h3>
+                        <p class="text-sm text-textMuted">Developer, Designer & Technologist operating from Egypt.</p>
+                    </div>
+                    <div class="pt-4 border-t border-surface flex items-center justify-between font-mono text-xs text-textMuted">
+                        <span>AGE</span>
+                        <span class="text-textMain font-bold">16 YEARS OLD</span>
+                    </div>
+                </div>
+
+                <!-- Profile Spec 2 -->
+                <div class="glass-panel p-8 rounded-3xl flex flex-col justify-between h-80 reveal-up" style="transition-delay: 0.1s;">
+                    <div>
+                        <span class="font-mono text-xs text-accentSecondary tracking-widest block mb-4">LOCATION & ROOTS</span>
+                        <h3 class="font-sans text-2xl font-bold mb-2">Damanhour</h3>
+                        <p class="text-sm text-textMuted">A historic Egyptian city inspiring quiet focus and modern digital ambition.</p>
+                    </div>
+                    <div class="pt-4 border-t border-surface flex items-center justify-between font-mono text-xs text-textMuted">
+                        <span>TIMEZONE</span>
+                        <span class="text-textMain font-bold">GMT+2 (EEST)</span>
+                    </div>
+                </div>
+
+                <!-- Profile Spec 3 -->
+                <div class="glass-panel p-8 rounded-3xl flex flex-col justify-between h-80 reveal-up" style="transition-delay: 0.2s;">
+                    <div>
+                        <span class="font-mono text-xs text-highlight tracking-widest block mb-4">DISCIPLINES</span>
+                        <h3 class="font-sans text-2xl font-bold mb-2">Multidisciplinary</h3>
+                        <p class="text-sm text-textMuted">From full-stack web engineering and automation to high-end graphic design and UI/UX.</p>
+                    </div>
+                    <div class="pt-4 border-t border-surface flex items-center justify-between font-mono text-xs text-textMuted">
+                        <span>EXPERTISE</span>
+                        <span class="text-textMain font-bold">Frontend & Backend</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Skills Experience Section -->
+    <section id="skills" class="py-28 relative border-t border-surface">
+        <div class="max-w-7xl mx-auto px-6">
+            <div class="mb-16">
+                <span class="font-mono text-xs text-accent tracking-widest uppercase block mb-3">03 // CAPABILITIES</span>
+                <h2 class="font-sans text-4xl md:text-5xl font-bold tracking-tight">Interactive Toolbox</h2>
+                <p class="font-mono text-xs text-textMuted mt-3">Click or hover over any technical module to inspect core toolsets.</p>
+            </div>
+
+            <!-- Skills Grid / Constellation -->
+            <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4" id="skills-container">
+                <!-- Skill 1 -->
+                <div class="skill-card glass-panel p-6 rounded-2xl cursor-pointer hover:border-accent transition-all duration-300 group" data-desc="Semantic structure, accessibility compliance, and modern DOM architectures.">
+                    <span class="font-mono text-[10px] text-textMuted block mb-2 group-hover:text-accent transition-colors">01 // CORE</span>
+                    <h3 class="font-sans text-xl font-bold text-textMain mb-3">HTML5 & CSS3</h3>
+                    <p class="skill-desc text-xs text-textMuted transition-colors">Hover to inspect specification.</p>
+                </div>
+                <!-- Skill 2 -->
+                <div class="skill-card glass-panel p-6 rounded-2xl cursor-pointer hover:border-accent transition-all duration-300 group" data-desc="Modern ESNext, asynchronous workflows, DOM manipulation, and reactive UI logic.">
+                    <span class="font-mono text-[10px] text-textMuted block mb-2 group-hover:text-accent transition-colors">02 // LANGUAGE</span>
+                    <h3 class="font-sans text-xl font-bold text-textMain mb-3">JavaScript</h3>
+                    <p class="skill-desc text-xs text-textMuted transition-colors">Hover to inspect specification.</p>
+                </div>
+                <!-- Skill 3 -->
+                <div class="skill-card glass-panel p-6 rounded-2xl cursor-pointer hover:border-accent transition-all duration-300 group" data-desc="Backend scripting, Discord bot development, task automation, and API integration.">
+                    <span class="font-mono text-[10px] text-textMuted block mb-2 group-hover:text-accent transition-colors">03 // BACKEND</span>
+                    <h3 class="font-sans text-xl font-bold text-textMain mb-3">Python</h3>
+                    <p class="skill-desc text-xs text-textMuted transition-colors">Hover to inspect specification.</p>
+                </div>
+                <!-- Skill 4 -->
+                <div class="skill-card glass-panel p-6 rounded-2xl cursor-pointer hover:border-accent transition-all duration-300 group" data-desc="Object-oriented programming principles, algorithms, and application logic.">
+                    <span class="font-mono text-[10px] text-textMuted block mb-2 group-hover:text-accent transition-colors">04 // SYSTEMS</span>
+                    <h3 class="font-sans text-xl font-bold text-textMain mb-3">Java</h3>
+                    <p class="skill-desc text-xs text-textMuted transition-colors">Hover to inspect specification.</p>
+                </div>
+                <!-- Skill 5 -->
+                <div class="skill-card glass-panel p-6 rounded-2xl cursor-pointer hover:border-accent transition-all duration-300 group" data-desc="User research, wireframing, high-contrast dark mode interfaces, and design systems.">
+                    <span class="font-mono text-[10px] text-textMuted block mb-2 group-hover:text-accent transition-colors">05 // DESIGN</span>
+                    <h3 class="font-sans text-xl font-bold text-textMain mb-3">UI/UX Design</h3>
+                    <p class="skill-desc text-xs text-textMuted transition-colors">Hover to inspect specification.</p>
+                </div>
+                <!-- Skill 6 -->
+                <div class="skill-card glass-panel p-6 rounded-2xl cursor-pointer hover:border-accent transition-all duration-300 group" data-desc="Brand identity generation, banner design, digital storefront mockups, and vector art.">
+                    <span class="font-mono text-[10px] text-textMuted block mb-2 group-hover:text-accent transition-colors">06 // VISUAL</span>
+                    <h3 class="font-sans text-xl font-bold text-textMain mb-3">Graphic Design</h3>
+                    <p class="skill-desc text-xs text-textMuted transition-colors">Hover to inspect specification.</p>
+                </div>
+                <!-- Skill 7 -->
+                <div class="skill-card glass-panel p-6 rounded-2xl cursor-pointer hover:border-accent transition-all duration-300 group" data-desc="WebGL scenes, procedural geometry, lighting, and cinematic 3D web experiences.">
+                    <span class="font-mono text-[10px] text-textMuted block mb-2 group-hover:text-accent transition-colors">07 // IMMERSIVE</span>
+                    <h3 class="font-sans text-xl font-bold text-textMain mb-3">Three.js / WebGL</h3>
+                    <p class="skill-desc text-xs text-textMuted transition-colors">Hover to inspect specification.</p>
+                </div>
+                <!-- Skill 8 -->
+                <div class="skill-card glass-panel p-6 rounded-2xl cursor-pointer hover:border-accent transition-all duration-300 group" data-desc="Custom Discord bots, automated ticket management, storefronts, and server administration tools.">
+                    <span class="font-mono text-[10px] text-textMuted block mb-2 group-hover:text-accent transition-colors">08 // AUTOMATION</span>
+                    <h3 class="font-sans text-xl font-bold text-textMain mb-3">Discord Ecosystems</h3>
+                    <p class="skill-desc text-xs text-textMuted transition-colors">Hover to inspect specification.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Projects Section -->
+    <section id="projects" class="py-28 relative border-t border-surface bg-secondaryBg/30">
+        <div class="max-w-7xl mx-auto px-6">
+            <div class="flex flex-col md:flex-row md:items-end justify-between mb-16 gap-4">
+                <div>
+                    <span class="font-mono text-xs text-accent tracking-widest uppercase block mb-3">04 // SELECTED WORKS</span>
+                    <h2 class="font-sans text-4xl md:text-5xl font-bold tracking-tight">Featured Projects</h2>
+                </div>
+                <p class="font-mono text-xs text-textMuted max-w-xs">Editorial showcases highlighting technical depth and design precision.</p>
+            </div>
+
+            <!-- Projects Gallery -->
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+                <!-- Project 01 -->
+                <div class="project-card glass-panel rounded-3xl overflow-hidden group cursor-pointer border border-surface hover:border-accent/40 transition-all duration-500" data-project="01">
+                    <div class="h-64 sm:h-80 w-full bg-gradient-to-br from-surface to-darkBg relative overflow-hidden flex items-center justify-center p-8">
+                        <div class="absolute inset-0 bg-[radial-gradient(circle_at_30%_30%,rgba(99,102,241,0.15),transparent_60%)]"></div>
+                        <div class="font-mono text-7xl font-bold text-surface group-hover:text-accent/20 transition-colors">01</div>
+                        <div class="absolute bottom-6 left-6 right-6 flex items-center justify-between">
+                            <span class="font-mono text-xs text-accent tracking-widest bg-accent/10 px-3 py-1 rounded-full border border-accent/20">3D WEB EXPERIENCE</span>
+                            <span class="font-mono text-xs text-textMuted">2026</span>
+                        </div>
+                    </div>
+                    <div class="p-8">
+                        <h3 class="font-sans text-2xl font-bold text-textMain mb-2 group-hover:text-accentSecondary transition-colors">Space Explorer</h3>
+                        <p class="text-sm text-textMuted mb-6 leading-relaxed">A futuristic interactive 3D solar system experience built with Three.js, featuring procedural orbital mechanics and celestial telemetry.</p>
+                        <div class="flex items-center justify-between pt-4 border-t border-surface">
+                            <span class="font-mono text-xs text-textMuted">JavaScript • Three.js • WebGL</span>
+                            <span class="font-mono text-xs text-textMain font-semibold flex items-center gap-1 group-hover:translate-x-1 transition-transform">
+                                VIEW CASE STUDY &rarr;
+                            </span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Project 02 -->
+                <div class="project-card glass-panel rounded-3xl overflow-hidden group cursor-pointer border border-surface hover:border-accent/40 transition-all duration-500" data-project="02">
+                    <div class="h-64 sm:h-80 w-full bg-gradient-to-br from-surface to-darkBg relative overflow-hidden flex items-center justify-center p-8">
+                        <div class="absolute inset-0 bg-[radial-gradient(circle_at_70%_70%,rgba(34,211,238,0.15),transparent_60%)]"></div>
+                        <div class="font-mono text-7xl font-bold text-surface group-hover:text-accentSecondary/20 transition-colors">02</div>
+                        <div class="absolute bottom-6 left-6 right-6 flex items-center justify-between">
+                            <span class="font-mono text-xs text-cyan-400 tracking-widest bg-cyan-950/40 px-3 py-1 rounded-full border border-cyan-500/20">E-COMMERCE UI</span>
+                            <span class="font-mono text-xs text-textMuted">2026</span>
+                        </div>
+                    </div>
+                    <div class="p-8">
+                        <h3 class="font-sans text-2xl font-bold text-textMain mb-2 group-hover:text-accentSecondary transition-colors">Axel Store</h3>
+                        <p class="text-sm text-textMuted mb-6 leading-relaxed">A premium storefront concept for digital game currency charging and custom Discord server assets with automated ticket routing.</p>
+                        <div class="flex items-center justify-between pt-4 border-t border-surface">
+                            <span class="font-mono text-xs text-textMuted">Python • JavaScript • Discord.js</span>
+                            <span class="font-mono text-xs text-textMain font-semibold flex items-center gap-1 group-hover:translate-x-1 transition-transform">
+                                VIEW CASE STUDY &rarr;
+                            </span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Project 03 -->
+                <div class="project-card glass-panel rounded-3xl overflow-hidden group cursor-pointer border border-surface hover:border-accent/40 transition-all duration-500" data-project="03">
+                    <div class="h-64 sm:h-80 w-full bg-gradient-to-br from-surface to-darkBg relative overflow-hidden flex items-center justify-center p-8">
+                        <div class="absolute inset-0 bg-[radial-gradient(circle_at_30%_70%,rgba(236,72,153,0.15),transparent_60%)]"></div>
+                        <div class="font-mono text-7xl font-bold text-surface group-hover:text-pink-500/20 transition-colors">03</div>
+                        <div class="absolute bottom-6 left-6 right-6 flex items-center justify-between">
+                            <span class="font-mono text-xs text-pink-400 tracking-widest bg-pink-950/40 px-3 py-1 rounded-full border border-pink-500/20">CULTURAL HERITAGE</span>
+                            <span class="font-mono text-xs text-textMuted">2026</span>
+                        </div>
+                    </div>
+                    <div class="p-8">
+                        <h3 class="font-sans text-2xl font-bold text-textMain mb-2 group-hover:text-accentSecondary transition-colors">أثر — Arabic Antiques</h3>
+                        <p class="text-sm text-textMuted mb-6 leading-relaxed">A modern Arabic antiques showcase experience combining traditional calligraphy aesthetics with high-end dark luxury minimalism.</p>
+                        <div class="flex items-center justify-between pt-4 border-t border-surface">
+                            <span class="font-mono text-xs text-textMuted">HTML5 • CSS3 • JavaScript</span>
+                            <span class="font-mono text-xs text-textMain font-semibold flex items-center gap-1 group-hover:translate-x-1 transition-transform">
+                                VIEW CASE STUDY &rarr;
+                            </span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Project 04 -->
+                <div class="project-card glass-panel rounded-3xl overflow-hidden group cursor-pointer border border-surface hover:border-accent/40 transition-all duration-500" data-project="04">
+                    <div class="h-64 sm:h-80 w-full bg-gradient-to-br from-surface to-darkBg relative overflow-hidden flex items-center justify-center p-8">
+                        <div class="absolute inset-0 bg-[radial-gradient(circle_at_70%_30%,rgba(99,102,241,0.15),transparent_60%)]"></div>
+                        <div class="font-mono text-7xl font-bold text-surface group-hover:text-accent/20 transition-colors">04</div>
+                        <div class="absolute bottom-6 left-6 right-6 flex items-center justify-between">
+                            <span class="font-mono text-xs text-indigo-400 tracking-widest bg-indigo-950/40 px-3 py-1 rounded-full border border-indigo-500/20">LUXURY SHOWCASE</span>
+                            <span class="font-mono text-xs text-textMuted">2026</span>
+                        </div>
+                    </div>
+                    <div class="p-8">
+                        <h3 class="font-sans text-2xl font-bold text-textMain mb-2 group-hover:text-accentSecondary transition-colors">النسّاج — Carpet Studio</h3>
+                        <p class="text-sm text-textMuted mb-6 leading-relaxed">A luxury Arabic carpet showcase featuring intricate textural imagery, smooth transitions, and immersive typographic layouts.</p>
+                        <div class="flex items-center justify-between pt-4 border-t border-surface">
+                            <span class="font-mono text-xs text-textMuted">UI/UX Design • Frontend</span>
+                            <span class="font-mono text-xs text-textMain font-semibold flex items-center gap-1 group-hover:translate-x-1 transition-transform">
+                                VIEW CASE STUDY &rarr;
+                            </span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Contact Section -->
+    <section id="contact" class="py-28 relative border-t border-surface">
+        <div class="max-w-7xl mx-auto px-6 grid grid-cols-1 lg:grid-cols-12 gap-12 items-center">
+            <div class="lg:col-span-7">
+                <span class="font-mono text-xs text-accent tracking-widest uppercase block mb-3">05 // INITIATE CONTACT</span>
+                <h2 class="font-sans text-5xl md:text-6xl font-bold tracking-tight mb-6">HAVE AN IDEA?<br>LET'S BUILD IT.</h2>
+                <p class="font-mono text-sm text-textMuted max-w-lg mb-8 leading-relaxed">
+                    Whether you have a creative project in mind, need a high-end web interface engineered, or simply want to connect, my inbox is always open.
+                </p>
+                <div class="flex flex-wrap gap-4">
+                    <a href="mailto:youssefdabis@gmail.com" class="px-8 py-4 rounded-full bg-accent text-white font-mono text-xs font-semibold tracking-wider hover:bg-indigo-600 transition-colors shadow-lg">
+                        EMAIL ME DIRECTLY
+                    </a>
+                </div>
+            </div>
+
+            <div class="lg:col-span-5 flex flex-col gap-4">
+                <a href="https://instagram.com" target="_blank" rel="noopener noreferrer" class="glass-panel p-6 rounded-2xl flex items-center justify-between group hover:border-accent transition-all">
+                    <div class="flex items-center gap-4">
+                        <span class="font-mono text-xs text-accent">01</span>
+                        <span class="font-sans font-semibold text-lg">Instagram</span>
+                    </div>
+                    <span class="font-mono text-xs text-textMuted group-hover:text-textMain transition-colors">&nearr;</span>
+                </a>
+                <a href="https://tiktok.com" target="_blank" rel="noopener noreferrer" class="glass-panel p-6 rounded-2xl flex items-center justify-between group hover:border-accent transition-all">
+                    <div class="flex items-center gap-4">
+                        <span class="font-mono text-xs text-cyan-400">02</span>
+                        <span class="font-sans font-semibold text-lg">TikTok</span>
+                    </div>
+                    <span class="font-mono text-xs text-textMuted group-hover:text-textMain transition-colors">&nearr;</span>
+                </a>
+                <a href="https://whatsapp.com" target="_blank" rel="noopener noreferrer" class="glass-panel p-6 rounded-2xl flex items-center justify-between group hover:border-accent transition-all">
+                    <div class="flex items-center gap-4">
+                        <span class="font-mono text-xs text-emerald-400">03</span>
+                        <span class="font-sans font-semibold text-lg">WhatsApp</span>
+                    </div>
+                    <span class="font-mono text-xs text-textMuted group-hover:text-textMain transition-colors">&nearr;</span>
+                </a>
+                <a href="https://github.com" target="_blank" rel="noopener noreferrer" class="glass-panel p-6 rounded-2xl flex items-center justify-between group hover:border-accent transition-all">
+                    <div class="flex items-center gap-4">
+                        <span class="font-mono text-xs text-pink-400">04</span>
+                        <span class="font-sans font-semibold text-lg">GitHub</span>
+                    </div>
+                    <span class="font-mono text-xs text-textMuted group-hover:text-textMain transition-colors">&nearr;</span>
+                </a>
+            </div>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="py-12 border-t border-surface bg-secondaryBg/60">
+        <div class="max-w-7xl mx-auto px-6 flex flex-col sm:flex-row items-center justify-between gap-6 font-mono text-xs text-textMuted">
+            <div class="flex items-center gap-3">
+                <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+                <span>YOUSSEF // DEVELOPER & DESIGNER — DAMANHOUR, EGYPT</span>
+            </div>
+            <div>
+                <span>© 2026 ALL RIGHTS RESERVED</span>
+            </div>
+        </div>
+    </footer>
+
+    <!-- Project Case Study Modal Overlay -->
+    <div id="project-modal" class="fixed inset-0 z-50 bg-darkBg/90 backdrop-blur-xl flex items-center justify-center p-4 sm:p-6 opacity-0 pointer-events-none transition-opacity duration-300">
+        <div id="modal-content" class="glass-panel max-w-4xl w-full max-h-[90vh] overflow-y-auto rounded-3xl p-8 md:p-12 relative transform scale-95 transition-transform duration-300">
+            <button id="close-modal" class="absolute top-6 right-6 w-10 h-10 rounded-full glass-panel flex items-center justify-center text-textMuted hover:text-textMain transition-colors">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                </svg>
+            </button>
+            <div id="modal-body">
+                <!-- Dynamically populated project details -->
+            </div>
+        </div>
+    </div>
+
+    <!-- Application Script -->
+    <script>
+        // --- Loader Logic ---
+        window.addEventListener('load', () => {
+            const loaderBar = document.getElementById('loader-bar');
+            const loader = document.getElementById('loader');
+            setTimeout(() => {
+                loaderBar.style.transform = 'translateX(0%)';
+            }, 100);
+            setTimeout(() => {
+                loader.style.opacity = '0';
+                setTimeout(() => {
+                    loader.style.display = 'none';
+                }, 700);
+            }, 1000);
+        });
+
+        // --- Custom Cursor Logic ---
+        const cursor = document.getElementById('custom-cursor');
+        const cursorDot = document.getElementById('cursor-dot');
+        let mouseX = window.innerWidth / 2;
+        let mouseY = window.innerHeight / 2;
+        let cursorX = mouseX;
+        let cursorY = mouseY;
+
+        window.addEventListener('mousemove', (e) => {
+            mouseX = e.clientX;
+            mouseY = e.clientY;
+            cursorDot.style.left = `${mouseX}px`;
+            cursorDot.style.top = `${mouseY}px`;
+        });
+
+        function renderCursor() {
+            cursorX += (mouseX - cursorX) * 0.15;
+            cursorY += (mouseY - cursorY) * 0.15;
+            cursor.style.left = `${cursorX}px`;
+            cursor.style.top = `${cursorY}px`;
+            requestAnimationFrame(renderCursor);
+        }
+        renderCursor();
+
+        // Cursor hover expansions
+        const interactiveElements = document.querySelectorAll('a, button, .project-card, .skill-card');
+        interactiveElements.forEach(el => {
+            el.addEventListener('mouseenter', () => {
+                cursor.style.transform = 'translate(-50%, -50%) scale(1.6)';
+                cursor.style.backgroundColor = 'rgba(99, 102, 241, 0.2)';
+                cursor.style.borderColor = '#6366F1';
+            });
+            el.addEventListener('mouseleave', () => {
+                cursor.style.transform = 'translate(-50%, -50%) scale(1)';
+                cursor.style.backgroundColor = 'rgba(34, 211, 238, 0.1)';
+                cursor.style.borderColor = 'rgba(34, 211, 238, 0.4)';
+            });
+        });
+
+        // --- Mobile Menu Toggle ---
+        const menuBtn = document.getElementById('menu-btn');
+        const closeMenu = document.getElementById('close-menu');
+        const mobileMenu = document.getElementById('mobile-menu');
+        const mobileLinks = document.querySelectorAll('.mobile-link');
+
+        menuBtn.addEventListener('click', () => {
+            mobileMenu.classList.remove('opacity-0', 'pointer-events-none');
+        });
+        closeMenu.addEventListener('click', () => {
+            mobileMenu.classList.add('opacity-0', 'pointer-events-none');
+        });
+        mobileLinks.forEach(link => {
+            link.addEventListener('click', () => {
+                mobileMenu.classList.add('opacity-0', 'pointer-events-none');
+            });
+        });
+
+        // --- Scroll Reveal Animation ---
+        const revealElements = document.querySelectorAll('.reveal-up');
+        const revealOnScroll = () => {
+            revealElements.forEach(el => {
+                const elementTop = el.getBoundingClientRect().top;
+                const windowHeight = window.innerHeight - 100;
+                if (elementTop < windowHeight) {
+                    el.classList.add('active');
+                }
+            });
+        };
+        window.addEventListener('scroll', revealOnScroll);
+        window.addEventListener('load', revealOnScroll);
+
+        // --- Three.js Background Visual ---
+        const container = document.getElementById('webgl-container');
+        if (container) {
+            const scene = new THREE.Scene();
+            const camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 1000);
+            camera.position.z = 30;
+
+            const renderer = new THREE.WebGLRenderer({ alpha: true, antialias: true });
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+            container.appendChild(renderer.domElement);
+
+            // Procedural Particle Geometry
+            const particlesGeometry = new THREE.BufferGeometry();
+            const particlesCount = 700;
+            const posArray = new Float32Array(particlesCount * 3);
+
+            for (let i = 0; i < particlesCount * 3; i++) {
+                posArray[i] = (Math.random() - 0.5) * 50;
+            }
+
+            particlesGeometry.setAttribute('position', new THREE.BufferAttribute(posArray, 3));
+            const particlesMaterial = new THREE.PointsMaterial({
+                size: 0.12,
+                color: 0x22D3EE,
+                transparent: true,
+                opacity: 0.6,
+            });
+
+            const particlesMesh = new THREE.Points(particlesGeometry, particlesMaterial);
+            scene.add(particlesMesh);
+
+            // Subtle mouse interaction for 3D scene
+            let mouseX3D = 0;
+            let mouseY3D = 0;
+            window.addEventListener('mousemove', (e) => {
+                mouseX3D = (e.clientX / window.innerWidth) - 0.5;
+                mouseY3D = (e.clientY / window.innerHeight) - 0.5;
+            });
+
+            const clock = new THREE.Clock();
+            function animateThree() {
+                requestAnimationFrame(animateThree);
+                const elapsedTime = clock.getElapsedTime();
+                particlesMesh.rotation.y = elapsedTime * 0.03 + mouseX3D * 0.3;
+                particlesMesh.rotation.x = elapsedTime * 0.02 + mouseY3D * 0.3;
+                renderer.render(scene, camera);
+            }
+            animateThree();
+
+            window.addEventListener('resize', () => {
+                camera.aspect = window.innerWidth / window.innerHeight;
+                camera.updateProjectionMatrix();
+                renderer.setSize(window.innerWidth, window.innerHeight);
+            });
+        }
+
+        // --- Interactive Skills Dynamic Description ---
+        const skillCards = document.querySelectorAll('.skill-card');
+        skillCards.forEach(card => {
+            const desc = card.getAttribute('data-desc');
+            const descEl = card.querySelector('.skill-desc');
+            card.addEventListener('mouseenter', () => {
+                descEl.textContent = desc;
+                descEl.style.color = '#F5F7FA';
+            });
+            card.addEventListener('mouseleave', () => {
+                descEl.textContent = 'Hover to inspect specification.';
+                descEl.style.color = '#8A939F';
+            });
+        });
+
+        // --- Project Modal Case Studies ---
+        const projectData = {
+            "01": {
+                title: "Space Explorer",
+                category: "3D WEB EXPERIENCE",
+                year: "2026",
+                role: "Lead Creative Developer & Designer",
+                technologies: "JavaScript, Three.js, WebGL, Tailwind CSS",
+                challenge: "Designing a high-performance interactive 3D solar system experience that runs smoothly across desktop and mobile devices without stuttering or excessive DOM overhead.",
+                concept: "Leveraged procedural geometry and custom shaders in Three.js to render celestial bodies with realistic atmospheric scattering and interactive telemetry panels.",
+                result: "A cinematic, buttery-smooth WebGL application achieving a stable 60 FPS and offering users an engaging exploration of planetary mechanics."
+            },
+            "02": {
+                title: "Axel Store",
+                category: "E-COMMERCE UI & AUTOMATION",
+                year: "2026",
+                role: "Full-Stack Developer & UI/UX Designer",
+                technologies: "Python, JavaScript, Discord.js, HTML/CSS",
+                challenge: "Creating a reliable, lightning-fast digital storefront and ticket routing system to handle client orders for video game currency and custom Discord assets.",
+                concept: "Engineered custom automated Discord bots integrated with a sleek, dark luxury web interface to streamline customer verification and payment delivery.",
+                result: "Successfully automated order workflows, reducing client wait times by 80% and providing a professional storefront experience."
+            },
+            "03": {
+                title: "أثر — Arabic Antiques",
+                category: "CULTURAL HERITAGE SHOWCASE",
+                year: "2026",
+                role: "UI/UX Designer & Frontend Developer",
+                technologies: "HTML5, CSS3, Modern JavaScript",
+                challenge: "Bridging the gap between traditional Arabic antique craftsmanship and ultra-modern digital minimalism without losing cultural authenticity.",
+                concept: "Combined refined Arabic typography with high-contrast dark surfaces, subtle gold-tinted accents, and smooth horizontal scrolling storytelling.",
+                result: "An immersive digital exhibition that honors historical artifacts through modern web design principles."
+            },
+            "04": {
+                title: "النسّاج — Carpet Studio",
+                category: "LUXURY SHOWCASE",
+                year: "2026",
+                role: "Creative Designer & Frontend Developer",
+                technologies: "UI/UX Design, CSS Grid, JavaScript",
+                challenge: "Displaying intricate textile patterns and luxury carpet weaves in a digital environment with absolute visual clarity.",
+                concept: "Implemented macro-photography zoom interactions, minimal typographic framing, and frictionless layout transitions.",
+                result: "A sophisticated e-portfolio concept tailored for high-end artisan carpet manufacturing."
+            }
+        };
+
+        const modal = document.getElementById('project-modal');
+        const modalContent = document.getElementById('modal-content');
+        const modalBody = document.getElementById('modal-body');
+        const closeModal = document.getElementById('close-modal');
+        const projectCards = document.querySelectorAll('.project-card');
+
+        projectCards.forEach(card => {
+            card.addEventListener('click', () => {
+                const projId = card.getAttribute('data-project');
+                const data = projectData[projId];
+                if (data) {
+                    modalBody.innerHTML = `
+                        <span class="font-mono text-xs text-accent tracking-widest block mb-2">${data.category} // ${data.year}</span>
+                        <h2 class="font-sans text-3xl md:text-4xl font-bold mb-6">${data.title}</h2>
+                        
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8 pb-8 border-b border-surface">
+                            <div>
+                                <span class="font-mono text-[10px] text-textMuted block mb-1">ROLE</span>
+                                <p class="text-sm font-semibold">${data.role}</p>
+                            </div>
+                            <div>
+                                <span class="font-mono text-[10px] text-textMuted block mb-1">TECHNOLOGIES</span>
+                                <p class="text-sm font-semibold">${data.technologies}</p>
+                            </div>
+                        </div>
+
+                        <div class="space-y-6">
+                            <div>
+                                <h3 class="font-mono text-xs text-accentSecondary tracking-widest mb-2">01 // THE CHALLENGE</h3>
+                                <p class="text-sm text-textMuted leading-relaxed">${data.challenge}</p>
+                            </div>
+                            <div>
+                                <h3 class="font-mono text-xs text-accentSecondary tracking-widest mb-2">02 // CONCEPT & EXECUTION</h3>
+                                <p class="text-sm text-textMuted leading-relaxed">${data.concept}</p>
+                            </div>
+                            <div>
+                                <h3 class="font-mono text-xs text-accentSecondary tracking-widest mb-2">03 // RESULT & IMPACT</h3>
+                                <p class="text-sm text-textMuted leading-relaxed">${data.result}</p>
+                            </div>
+                        </div>
+                    `;
+                    modal.classList.remove('opacity-0', 'pointer-events-none');
+                    modalContent.classList.remove('scale-95');
+                    document.body.style.overflow = 'hidden';
+                }
+            });
+        });
+
+        const closeModalFunc = () => {
+            modal.classList.add('opacity-0', 'pointer-events-none');
+            modalContent.classList.add('scale-95');
+            document.body.style.overflow = 'auto';
+        };
+
+        closeModal.addEventListener('click', closeModalFunc);
+        modal.addEventListener('click', (e) => {
+            if (e.target === modal) closeModalFunc();
+        });
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') closeModalFunc();
+        });
+    </script>
+</body>
+</html>
